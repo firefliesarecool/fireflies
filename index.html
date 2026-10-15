@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hello, fireflies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky-top:#EFE6FF; --sky-bottom:#FFD9C7; --ink:#2A1B5C; --soft:#5C4C8F;
+  --glow:#E8890C; --panel:rgba(255,255,255,.55);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky-top:#150F3D; --sky-bottom:#4A2468; --ink:#F4EEFF; --soft:#C3B5E6;
+    --glow:#FFC857; --panel:rgba(20,12,55,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --sky-top:#150F3D; --sky-bottom:#4A2468; --ink:#F4EEFF; --soft:#C3B5E6;
+  --glow:#FFC857; --panel:rgba(20,12,55,.55);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:linear-gradient(180deg,var(--sky-top),var(--sky-bottom));
+  background-color:var(--sky-top);
+  color:var(--ink); font-family:"DM Sans",system-ui,sans-serif;
+  overflow:hidden; -webkit-tap-highlight-color:transparent;
+}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+main{
+  position:relative; z-index:1; height:100%;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:0 clamp(24px,8vw,120px); pointer-events:none;
+}
+h1{
+  font-family:"Fraunces",Georgia,serif; font-weight:300;
+  font-size:clamp(2.6rem,9vw,7rem); line-height:1.02; letter-spacing:-.02em;
+  margin:0 0 .35em; max-width:11em;
+}
+h1 em{font-style:italic;font-weight:500}
+p{font-size:clamp(1rem,2.2vw,1.2rem);line-height:1.6;color:var(--soft);max-width:34em;margin:0 0 1.6em}
+label{
+  pointer-events:auto; display:inline-flex; align-items:center; gap:.7em;
+  background:var(--panel); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border-radius:999px; padding:.55em 1.1em; width:fit-content; color:var(--soft); font-size:.95rem;
+}
+input{
+  font:inherit; color:var(--ink); background:transparent; border:0;
+  border-bottom:1.5px solid var(--glow); padding:.15em .1em; width:9em; outline:none;
+}
+input:focus-visible{border-bottom-width:3px}
+.hint{position:fixed;z-index:1;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center;font-size:.9rem;color:var(--soft);pointer-events:none}
+@media (prefers-reduced-motion: no-preference){
+  h1,p,label{animation:rise 1.4s cubic-bezier(.2,.7,.2,1) both}
+  p{animation-delay:.25s} label{animation-delay:.5s}
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<main>
+  <h1>Hello, <em id="who">stranger</em>.<br>This is your first web page.</h1>
+  <p>It's a real page on the internet. Move your mouse or finger and the fireflies will follow. Tap to let more of them out.</p>
+  <label>Your name <input id="name" type="text" maxlength="20" placeholder="type here" autocomplete="off"></label>
+</main>
+<div class="hint">Tap anywhere to release more fireflies</div>
+<script>
+(function(){
+  var cv=document.getElementById('c'),ctx=cv.getContext('2d');
+  var W,H,dpr=Math.min(window.devicePixelRatio||1,2),flies=[],mouse={x:null,y:null};
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function size(){W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+  function add(x,y){flies.push({x:x==null?Math.random()*W:x,y:y==null?Math.random()*H:y,
+    vx:(Math.random()-.5),vy:(Math.random()-.5),p:Math.random()*6.28,s:1.5+Math.random()*2.5})}
+  size();for(var i=0;i<40;i++)add();
+  addEventListener('resize',size);
+  function move(e){var t=e.touches?e.touches[0]:e;mouse.x=t.clientX;mouse.y=t.clientY}
+  addEventListener('mousemove',move);addEventListener('touchmove',move,{passive:true});
+  addEventListener('pointerdown',function(e){for(var i=0;i<6&&flies.length<160;i++)add(e.clientX,e.clientY)});
+  function glowColor(){return getComputedStyle(document.documentElement).getPropertyValue('--glow').trim()||'#FFC857'}
+  var col=glowColor();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){setTimeout(function(){col=glowColor()},50)});
+  function frame(t){
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation='source-over';
+    for(var i=0;i<flies.length;i++){
+      var f=flies[i];
+      f.vx+=(Math.random()-.5)*.12;f.vy+=(Math.random()-.5)*.12;
+      if(mouse.x!==null){var dx=mouse.x-f.x,dy=mouse.y-f.y,d=Math.sqrt(dx*dx+dy*dy)+1;
+        if(d<320){f.vx+=dx/d*.05;f.vy+=dy/d*.05}}
+      f.vx*=.97;f.vy*=.97;
+      if(!reduce){f.x+=f.vx;f.y+=f.vy}
+      if(f.x<-20)f.x=W+20;if(f.x>W+20)f.x=-20;if(f.y<-20)f.y=H+20;if(f.y>H+20)f.y=-20;
+      var a=.35+.65*Math.abs(Math.sin(t/900+f.p));
+      var g=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.s*7);
+      g.addColorStop(0,col);g.addColorStop(1,'rgba(255,200,87,0)');
+      ctx.globalAlpha=a*.55;ctx.fillStyle=g;ctx.beginPath();ctx.arc(f.x,f.y,f.s*7,0,6.283);ctx.fill();
+      ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();ctx.arc(f.x,f.y,f.s*.8,0,6.283);ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  var inp=document.getElementById('name'),who=document.getElementById('who');
+  inp.addEventListener('input',function(){who.textContent=inp.value.trim()||'stranger'});
+  inp.addEventListener('pointerdown',function(e){e.stopPropagation()});
+})();
+</script>
+</body>
+</html>
